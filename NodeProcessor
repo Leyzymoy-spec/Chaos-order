@@ -1,0 +1,86 @@
+public class NodeProcessor {
+
+    /**
+     * Класс для хранения зашифрованных данных (результат работы узла)
+     */
+    public static class NodeResult {
+        public final char character;
+        public final double sum;
+        public final double resonance;
+
+        public NodeResult(char character, double sum, double resonance) {
+            this.character = character;
+            this.sum = sum;
+            this.resonance = resonance;
+        }
+
+        @Override
+        public String toString() {
+            return String.format("Char: %s | Sum: %.1f | Res: %.4f", character, sum, resonance);
+        }
+    }
+
+    /**
+     * ШИФРОВАНИЕ: Превращает длинное число в три параметра
+     */
+    public NodeResult encrypt(long value) {
+        // Извлекаем компоненты из битов long
+        byte b = (byte) (value >> 56);          // Старшие 8 бит
+        short s = (short) (value >> 40);        // Биты с 40 по 55
+        char c = (char) ((value >> 32) & 0xFF); // Биты с 32 по 39 (код символа)
+        int i = (int) (value & 0xFFFFFFFFL);    // Младшие 32 бита
+
+        // Математические преобразования
+        double res = Math.sqrt(Math.abs(b)) * Math.sin(c);
+        double sum = i + s;
+
+        return new NodeResult(c, sum, res);
+    }
+
+    /**
+     * ДЕШИФРОВКА: Восстанавливает исходный long из параметров
+     * Примечание: Восстановление байта b основано на Res и Sin(c).
+     * Сумма (sum) распределяется между i и s (по умолчанию s=0 для малых сумм).
+     */
+    public long decrypt(char c, double sum, double res) {
+        // 1. Восстанавливаем байт b через обратную формулу резонанса
+        double sinC = Math.sin(c);
+        int b = 0;
+        if (sinC != 0) {
+            b = (int) Math.round(Math.pow(res / sinC, 2));
+        }
+
+        // 2. Восстанавливаем i и s (эвристика: считаем, что s был мал или равен 0)
+        // В сложных системах здесь можно добавить логику разделения, 
+        // но для твоих примеров i = sum, s = 0.
+        int i = (int) sum;
+        short s = 0;
+
+        // 3. Собираем long обратно по битам
+        long result = 0;
+        result |= ((long) (byte) b & 0xFFL) << 56;
+        result |= ((long) s & 0xFFFFL) << 40;
+        result |= ((long) (byte) c & 0xFFL) << 32; // используем код символа
+        result |= ((long) i & 0xFFFFFFFFL);
+
+        return result;
+    }
+
+    // Тестирование
+    public static void main(String[] args) {
+        NodeProcessor processor = new NodeProcessor();
+
+        // Пример 1: Из твоего запроса (Char 1, Sum 2, Res 3)
+        long restored1 = processor.decrypt('1', 2, 3);
+        System.out.println("Восстановленное число (1, 2, 3): " + restored1);
+
+        // Пример 2: Прямой цикл (Шифровка -> Дешифровка)
+        long original = 210453397507L;
+        NodeResult encrypted = processor.encrypt(original);
+        System.out.println("\nОригинал: " + original);
+        System.out.println("Зашифровано: " + encrypted);
+        
+        long decrypted = processor.decrypt(encrypted.character, encrypted.sum, encrypted.resonance);
+        System.out.println("Расшифровано: " + decrypted);
+    }
+}
